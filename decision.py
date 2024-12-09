@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -26,25 +26,19 @@ strength = np.array(data['strength'])
 def splitPassword(password):
     return list(password)
 
-# Initialize TfidfVectorizer
 tfidf = TfidfVectorizer(analyzer=splitPassword)
 
-# Transform passwords
 X = tfidf.fit_transform(password)
 
-# Split the data
 x_train, x_test, y_train, y_test = train_test_split(X, strength, test_size=0.33, random_state=10)
 
-# Train a Support Vector Machine model
-model = SVC(probability=True, kernel='linear')  # Use linear kernel, you can experiment with other kernels
+model = DecisionTreeClassifier(random_state=42)
 model.fit(x_train, y_train)
 
-# Evaluate the model
 y_pred = model.predict(x_test)
 y_test_encoded = pd.factorize(y_test)[0]
 y_pred_encoded = pd.factorize(y_pred, sort=True)[0]
 
-# Calculate metrics
 accuracy = accuracy_score(y_test, y_pred)
 conf_matrix = confusion_matrix(y_test, y_pred)
 precision = precision_score(y_test_encoded, y_pred_encoded, average="weighted")
@@ -56,7 +50,6 @@ print("Precision:", precision)
 print("Recall:", recall)
 print("F1 Score:", f1)
 
-# Plot confusion matrix as an image using seaborn
 plt.figure(figsize=(8, 6))
 sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=['low', 'normal', 'high'], yticklabels=['low', 'normal', 'high'])
 plt.title("Confusion Matrix")
@@ -64,29 +57,16 @@ plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.tight_layout()
 
-# Save the confusion matrix image
-plt.savefig("confusion_matrix_image_svm.png")
+plt.savefig("confusion_matrix_image_dt.png")
 plt.show()
 
-# ROC-AUC (One-vs-Rest for multiclass)
 y_test_binarized = pd.get_dummies(pd.factorize(y_test)[0])
 y_pred_proba = model.predict_proba(x_test)
 
 auc = roc_auc_score(y_test_binarized, y_pred_proba, average="weighted", multi_class="ovr")
 print("AUC-ROC:", auc)
 
-# Plot ROC Curve
-for i in range(y_test_binarized.shape[1]):
-    fpr, tpr, _ = roc_curve(y_test_binarized.iloc[:, i], y_pred_proba[:, i])
-    plt.plot(fpr, tpr, label=f"Class {i} (AUC = {auc:.2f})")
 
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curve")
-plt.legend(loc="best")
-plt.show()
-
-# Predict the strength of a new password
 prediction_password = "PasswordStrenghtPrediction.123"
 prediction = tfidf.transform([prediction_password]).toarray()
 model_predict = model.predict(prediction)
